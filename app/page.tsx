@@ -218,7 +218,7 @@ export default function Home() {
               <img src={letter.preview} alt="" className="h-24 w-20 shrink-0 rounded-md border border-line object-cover" />
               <label className={`${secondary} cursor-pointer`}>
                 {t.letterChange}
-                <input type="file" accept="image/*" capture="environment" className="sr-only"
+                <input type="file" accept="image/*" className="sr-only"
                   onChange={async (e) => { const f = e.target.files?.[0]; if (f) setLetter(await toPhoto(f)); }} />
               </label>
             </div>
@@ -229,7 +229,7 @@ export default function Home() {
                 <span className="text-lg font-semibold text-navy">{t.letterPhoto}</span>
                 <span className="text-base text-ink">{t.letterHint}</span>
               </span>
-              <input type="file" accept="image/*" capture="environment" className="sr-only"
+              <input type="file" accept="image/*" className="sr-only"
                 onChange={async (e) => { const f = e.target.files?.[0]; if (f) setLetter(await toPhoto(f)); }} />
             </label>
           )}
@@ -318,7 +318,7 @@ export default function Home() {
                 <label className={`${proof ? secondary : primary} mt-3 flex cursor-pointer items-center justify-center gap-2`}>
                   {proof ? <CheckIcon className="h-5 w-5 text-ok" /> : <CameraIcon className="h-5 w-5" />}
                   {proof ? t.proofAdded : t.takeProof}
-                  <input type="file" accept="image/*" capture="environment" className="sr-only"
+                  <input type="file" accept="image/*" className="sr-only"
                     onChange={async (e) => { const f = e.target.files?.[0]; if (f) setProof(await toPhoto(f)); }} />
                 </label>
               </div>
