@@ -19,7 +19,18 @@ const QUESTIONS: [string, (f: Facts) => YNU][] = [
 
 export type FormInput = { name: string; caseNumber: string; facts: Facts; exemptions: Exemption[]; proofJpegBase64?: string; date?: Date };
 
+// Standard PDF fonts only cover Western European letters (WinAnsi). Strip accents the font lacks
+// (Nguyễn -> Nguyen) and replace anything else (e.g. Chinese) with "?" instead of crashing.
+const WINANSI_EXTRA = new Set("€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ");
+const safe = (text: string) => [...text].map((ch) => {
+  const ok = (c: string) => c.charCodeAt(0) <= 0xff || WINANSI_EXTRA.has(c);
+  if (ok(ch)) return ch;
+  const base = ch.normalize("NFD").replace(/\p{M}/gu, "");
+  return base && [...base].every(ok) ? base : "?";
+}).join("");
+
 function wrap(text: string, font: PDFFont, size: number, width: number): string[] {
+  text = safe(text);
   const lines: string[] = [];
   let line = "";
   for (const word of text.split(" ")) {
@@ -41,6 +52,7 @@ function writer(page: PDFPage, font: PDFFont, bold: PDFFont) {
 }
 
 export async function buildSnap29Pdf(input: FormInput): Promise<Uint8Array> {
+  input = { ...input, name: safe(input.name), caseNumber: safe(input.caseNumber) };
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);

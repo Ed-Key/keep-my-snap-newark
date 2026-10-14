@@ -57,14 +57,14 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ story, letterImage: letter ? { mediaType: letter.mediaType, data: letter.data } : undefined }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? t.error);
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(t.error);
       setExtraction(json);
       setFacts(json.facts);
       setCaseNumber(json.letter.case_number ?? "");
       setStep(decide(json.facts).status === "NEED_MORE_INFO" ? "ask" : "confirm");
     } catch (e) {
-      setError((e as Error).message || t.error);
+      console.error(e); setError(t.error);
     } finally {
       setBusy(false);
     }
@@ -105,7 +105,8 @@ export default function Home() {
 
   async function getForm() {
     if (!facts || !result || !("exemptions" in result)) return;
-    const bytes = await formBytes();
+    let bytes: Uint8Array;
+    try { bytes = await formBytes(); } catch (e) { console.error(e); setError(t.error); return; }
     const file = new File([bytes as BlobPart], `SNAP-29-${caseNumber || "form"}.pdf`, { type: "application/pdf" });
     if (navigator.canShare?.({ files: [file] })) {
       try { await navigator.share({ files: [file], title: file.name }); return; } catch { /* fall back to download */ }
@@ -190,7 +191,7 @@ export default function Home() {
         <section className="flex flex-1 flex-col gap-3">
           <ResultCard result={result} t={t} />
           {daysUntil(extraction?.letter.hearing_request_deadline ?? null) != null && (
-            <p className="rounded-xl bg-red-50 p-3 font-semibold text-red-800">{t.daysLeft(daysUntil(extraction!.letter.hearing_request_deadline)!)}</p>
+            <div className="rounded-xl bg-red-50 p-3 text-red-800"><p className="font-semibold">{t.daysLeft(daysUntil(extraction!.letter.hearing_request_deadline)!)}</p><p className="text-sm">{t.hearingHow}</p></div>
           )}
           {(result.status === "EXEMPT" || result.status === "CLAIM_COUNTY_DECIDES") && (
             <button className={`${primary} mt-auto`} onClick={() => setStep("send")}>{t.seeWhatToDo}</button>
@@ -222,6 +223,13 @@ export default function Home() {
               <p className="text-sm text-neutral-700">{t.step3Body}</p>
             </li>
           </ol>
+          <div className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white p-3">
+            <label htmlFor="name2" className="text-sm font-medium">{t.yourName}</label>
+            <input id="name2" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" className="w-full rounded-lg border border-neutral-300 p-2 text-base" />
+            <label htmlFor="case2" className="text-sm font-medium">{t.caseNumber}</label>
+            <input id="case2" value={caseNumber} onChange={(e) => setCaseNumber(e.target.value)} className="w-full rounded-lg border border-neutral-300 p-2 text-base" />
+          </div>
+          {error && <p className="text-sm text-red-700">{error}</p>}
           <div className="mt-auto flex flex-col gap-2">
             {faxCfg?.enabled && (
               <>
@@ -243,7 +251,7 @@ export default function Home() {
             )}
             <button className={faxCfg?.enabled ? secondary : primary} disabled={!name.trim() || !caseNumber.trim()} onClick={getForm}>{faxCfg?.enabled ? t.shareInstead : t.downloadForm}</button>
           </div>
-          {(!name.trim() || !caseNumber.trim()) && <p className="text-sm text-neutral-600">{t.needNameCase}</p>}
+
         </section>
       )}
     </main>
@@ -319,6 +327,15 @@ function ResultCard({ result, t }: { result: Result; t: (typeof STRINGS)["en"] }
         <p className="text-lg font-bold">{t.notExemptTitle}</p>
         <p>{t.notExemptBody}</p>
         {result.meets80Hours && <p className="mt-2 text-green-800">{t.meets80}</p>}
+        <p className="mt-3 font-semibold">{t.neHow}</p>
+        <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
+          <li>{t.neTraining}</li>
+          <li>{t.neVolunteer}
+            <ul className="mt-1 list-[circle] space-y-1 pl-5">{t.neSites.map((x) => <li key={x}>{x}</li>)}</ul>
+          </li>
+        </ul>
+        <p className="mt-3 text-sm">{t.neGoodReason}</p>
+        <p className="mt-2 text-sm">{t.neStopped}</p>
       </div>
     );
   }
