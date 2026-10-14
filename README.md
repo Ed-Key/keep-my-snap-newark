@@ -6,6 +6,8 @@ Since 2026, adults on SNAP in New Jersey must log 80 hours a month of work, trai
 
 Keep My SNAP works like TurboTax for that form. A resident photographs their county letter and describes their situation in Spanish, Portuguese, or English. The app shows which exemption applies and why, then sends the filled form and proof to the county.
 
+**Demo video (59 s):** [`demo/keep-my-snap-demo.mp4`](demo/keep-my-snap-demo.mp4). It shows Maria's flow on the real app: letter photo, Spanish story, read-back, the exemption result with her deadline, and filing with a receipt. The fax is simulated in the demo.
+
 ## How it works
 
 The AI understands, and plain code decides:
