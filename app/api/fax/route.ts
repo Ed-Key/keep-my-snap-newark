@@ -1,12 +1,11 @@
-import { faxConfig, sendFax } from "@/lib/fax.ts";
+import { faxConfig, isSimulated, sendFax } from "@/lib/fax.ts";
 
 export async function GET() {
   const cfg = faxConfig();
-  return Response.json({ enabled: !!cfg, isCounty: cfg?.isCounty ?? false });
+  return Response.json({ enabled: true, simulated: isSimulated(), isCounty: cfg?.isCounty ?? false });
 }
 
 export async function POST(request: Request) {
-  if (!faxConfig()) return Response.json({ error: "Fax is not set up yet." }, { status: 503 });
   let body: { pdf?: unknown; reference?: unknown; consent?: unknown };
   try { body = await request.json(); } catch { return Response.json({ error: "Invalid JSON" }, { status: 400 }); }
   const pdf = typeof body.pdf === "string" ? body.pdf : "";

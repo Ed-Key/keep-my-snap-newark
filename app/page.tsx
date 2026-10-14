@@ -42,9 +42,9 @@ export default function Home() {
   const [caseNumber, setCaseNumber] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
-  const [faxCfg, setFaxCfg] = useState<{ enabled: boolean; isCounty: boolean } | null>(null);
+  const [faxCfg, setFaxCfg] = useState<{ enabled: boolean; simulated?: boolean; isCounty: boolean } | null>(null);
   const [consent, setConsent] = useState(false);
-  const [fax, setFax] = useState<{ state: "sending" | "queued" | "delivered" | "failed"; id?: string } | null>(null);
+  const [fax, setFax] = useState<{ state: "sending" | "queued" | "delivered" | "failed"; id?: string; rawId?: string } | null>(null);
   const [error, setError] = useState("");
   const t = STRINGS[lang];
   const result: Result | null = facts ? decide(facts) : null;
@@ -95,7 +95,7 @@ export default function Home() {
       for (let i = 0; i < 60; i++) {
         await new Promise((r) => setTimeout(r, 4000));
         const st = await fetch(`/api/fax/status?id=${encodeURIComponent(json.faxID)}`).then((r) => r.json()).catch(() => ({}));
-        if (st.status === "successful") { setFax({ state: "delivered", id: json.friendlyID || json.faxID }); return; }
+        if (st.status === "successful") { setFax({ state: "delivered", id: json.friendlyID || json.faxID, rawId: json.faxID }); return; }
         if (st.status === "failed") { setFax({ state: "failed" }); return; }
       }
     } catch {
@@ -225,7 +225,7 @@ export default function Home() {
           <div className="mt-auto flex flex-col gap-2">
             {faxCfg?.enabled && (
               <>
-                {!faxCfg.isCounty && <p className="rounded-lg bg-neutral-200 p-2 text-xs text-neutral-700">{t.demoNote}</p>}
+                {(faxCfg.simulated || !faxCfg.isCounty) && <p className="rounded-lg bg-neutral-200 p-2 text-xs text-neutral-700">{faxCfg.simulated ? t.simNote : t.demoNote}</p>}
                 <label className="flex items-start gap-2 text-sm">
                   <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-1 h-5 w-5" />
                   <span>{t.consent}</span>
@@ -235,6 +235,9 @@ export default function Home() {
                   <p role="status" className={`rounded-lg p-3 text-sm font-semibold ${fax.state === "delivered" ? "bg-green-50 text-green-900" : fax.state === "failed" ? "bg-red-50 text-red-800" : "bg-blue-50 text-blue-900"}`}>
                     {fax.state === "sending" ? t.faxSending : fax.state === "queued" ? t.faxQueued : fax.state === "delivered" ? t.faxDelivered(fax.id!) : t.faxFailed}
                   </p>
+                )}
+                {fax?.state === "delivered" && faxCfg.simulated && (
+                  <a href={`/api/fax/sent?id=${encodeURIComponent(fax.rawId!)}`} target="_blank" rel="noopener" className="text-center text-sm text-blue-700 underline">{t.viewSent}</a>
                 )}
               </>
             )}
