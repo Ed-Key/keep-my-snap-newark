@@ -93,13 +93,13 @@ export default function Home() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 bg-neutral-50 px-4 py-6 text-neutral-900">
       <header className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">{t.title}</h1>
+        <h1 className="text-xl font-bold">{step === "lang" ? "Conserve su SNAP · Mantenha seu SNAP · Keep your SNAP" : t.title}</h1>
         {step !== "lang" && <button onClick={restart} className="text-sm text-blue-700 underline">{t.startOver}</button>}
       </header>
 
       {step === "lang" && (
         <section className="flex flex-1 flex-col gap-3">
-          <p className="text-neutral-600">{t.tagline}</p>
+          <p className="text-neutral-600">Gratis. Privado. · Grátis. Privado. · Free. Private.</p>
           <div className="mt-auto flex flex-col gap-3">
             {(["es", "pt", "en"] as Lang[]).map((l) => (
               <button key={l} className={secondary} onClick={() => { setLang(l); setStep("story"); }}>
@@ -119,8 +119,8 @@ export default function Home() {
               onChange={async (e) => { const f = e.target.files?.[0]; if (f) setLetter(await toPhoto(f)); }} />
           </label>
           {letter ? <img src={letter.preview} alt="" className="max-h-40 rounded-lg object-contain" /> : <p className="text-sm text-neutral-600">{t.letterHint}</p>}
-          <h2 className="mt-2 text-lg font-semibold">{t.storyQ}</h2>
-          <textarea value={story} onChange={(e) => setStory(e.target.value)} rows={5} maxLength={4000}
+          <label htmlFor="story" className="mt-2 text-lg font-semibold">{t.storyQ}</label>
+          <textarea id="story" value={story} onChange={(e) => setStory(e.target.value)} rows={5} maxLength={4000}
             placeholder={t.storyPlaceholder} className="rounded-xl border border-neutral-300 bg-white p-3 text-base" />
           {error && <p className="text-sm text-red-700">{error}</p>}
           <button className={`${primary} mt-auto`} disabled={busy || !story.trim()} onClick={submitStory}>
@@ -140,12 +140,12 @@ export default function Home() {
         <section className="flex flex-1 flex-col gap-3">
           <h2 className="text-lg font-semibold">{t.confirmTitle}</h2>
           <div className="rounded-xl border border-neutral-200 bg-white p-3">
-            <label className="text-sm font-medium">{t.yourName}</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" className="mt-1 w-full rounded-lg border border-neutral-300 p-2 text-base" />
+            <label htmlFor="name" className="text-sm font-medium">{t.yourName}</label>
+            <input id="name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" className="mt-1 w-full rounded-lg border border-neutral-300 p-2 text-base" />
           </div>
           <div className="rounded-xl border border-neutral-200 bg-white p-3">
-            <label className="text-sm font-medium">{t.caseNumber} {extraction?.letter.case_number && <span className="text-neutral-500">{t.fromLetter}</span>}</label>
-            <input value={caseNumber} onChange={(e) => setCaseNumber(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-300 p-2 text-base" />
+            <label htmlFor="case" className="text-sm font-medium">{t.caseNumber} {extraction?.letter.case_number && <span className="text-neutral-500">{t.fromLetter}</span>}</label>
+            <input id="case" value={caseNumber} onChange={(e) => setCaseNumber(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-300 p-2 text-base" />
             {!caseNumber && <p className="mt-1 text-xs text-neutral-600">{t.caseNumberHint}</p>}
           </div>
           <FactRows facts={facts} t={t} />
@@ -175,7 +175,7 @@ export default function Home() {
             <li className="rounded-xl border border-neutral-200 bg-white p-3">
               <p className="font-semibold">1. {t.step1}</p>
               <ul className="mt-1 list-disc pl-5 text-sm text-neutral-700">
-                {result.exemptions.map((e) => <li key={e.id}>{e.proof}</li>)}
+                {result.exemptions.map((e) => <li key={e.id}>{t.proof[e.id] ?? e.proof}</li>)}
               </ul>
               <label className={`${proof ? secondary : primary} mt-2 block`}>
                 {proof ? `✓ ${t.proofAdded}` : t.takeProof}

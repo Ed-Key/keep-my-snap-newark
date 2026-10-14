@@ -62,6 +62,20 @@ const en = {
     q11_native_american: "Are you Native American (Indian, Urban Indian, or California Indian)?",
   } as Record<string, string>,
   ui: { receiving: "Yes, I'm getting paid", applied: "I applied, not paid yet", no: "No" },
+  proof: {
+      "q1_child_under_14": "None needed. The county already has your household on file.",
+      "q2_unable_to_work": "A statement from a doctor or clinic, proof of disability benefits, or a letter from your shelter or caseworker",
+      "q3_disability_benefits": "Your disability benefits award letter",
+      "q4_working_30h_or_earning": "Your recent pay stubs",
+      "q5_unemployment_receiving": "Your unemployment benefits letter, or a screenshot of your claim status on myunemployment.nj.gov",
+      "q5_unemployment_applied": "Your unemployment application confirmation. You must also be doing the unemployment job search.",
+      "q6_student_half_time": "Enrollment verification from your school or program",
+      "q7_wfnj_tanf": "None needed. The county has your WFNJ record.",
+      "q8_drug_alcohol_treatment": "A letter from your treatment program",
+      "q9_pregnant": "A note from your doctor or clinic",
+      "q10_caring_for_ill_person": "A note from the doctor of the person you care for",
+      "q11_native_american": "Your tribal enrollment document"
+  } as Record<string, string>,
   ex: {
     q1_child_under_14: "A child under 14 lives in your SNAP household",
     q2_unable_to_work: "You can't work right now",
@@ -142,6 +156,20 @@ const es: Strings = {
     q11_native_american: "¿Es usted indígena americano (Indian, Urban Indian o California Indian)?",
   },
   ui: { receiving: "Sí, me están pagando", applied: "Lo solicité, todavía no me pagan", no: "No" },
+  proof: {
+      "q1_child_under_14": "No necesita nada. El condado ya tiene su hogar registrado.",
+      "q2_unable_to_work": "Una declaración de su médico o clínica, prueba de beneficios por discapacidad, o una carta de su albergue o trabajador social",
+      "q3_disability_benefits": "Su carta de aprobación de beneficios por discapacidad",
+      "q4_working_30h_or_earning": "Sus talones de pago recientes",
+      "q5_unemployment_receiving": "Su carta de beneficios de desempleo, o una captura de pantalla del estado de su reclamo en myunemployment.nj.gov",
+      "q5_unemployment_applied": "La confirmación de su solicitud de desempleo. También debe estar buscando trabajo como pide desempleo.",
+      "q6_student_half_time": "Una verificación de inscripción de su escuela o programa",
+      "q7_wfnj_tanf": "No necesita nada. El condado tiene su registro de WFNJ.",
+      "q8_drug_alcohol_treatment": "Una carta de su programa de tratamiento",
+      "q9_pregnant": "Una nota de su médico o clínica",
+      "q10_caring_for_ill_person": "Una nota del médico de la persona que usted cuida",
+      "q11_native_american": "Su documento de inscripción tribal"
+  } as Record<string, string>,
   ex: {
     q1_child_under_14: "Vive un niño menor de 14 años en su hogar de SNAP",
     q2_unable_to_work: "Usted no puede trabajar ahora",
@@ -220,6 +248,20 @@ const pt: Strings = {
     q11_native_american: "Você é indígena americano (Indian, Urban Indian ou California Indian)?",
   },
   ui: { receiving: "Sim, estou recebendo", applied: "Pedi, ainda não recebi", no: "Não" },
+  proof: {
+      "q1_child_under_14": "Não precisa de nada. O condado já tem seu domicílio registrado.",
+      "q2_unable_to_work": "Uma declaração do seu médico ou clínica, prova de benefícios por deficiência, ou uma carta do seu abrigo ou assistente social",
+      "q3_disability_benefits": "Sua carta de aprovação de benefícios por deficiência",
+      "q4_working_30h_or_earning": "Seus contracheques recentes",
+      "q5_unemployment_receiving": "Sua carta de seguro-desemprego, ou uma captura de tela do status do seu pedido em myunemployment.nj.gov",
+      "q5_unemployment_applied": "A confirmação do seu pedido de seguro-desemprego. Você também precisa estar procurando emprego como o seguro exige.",
+      "q6_student_half_time": "Uma verificação de matrícula da sua escola ou programa",
+      "q7_wfnj_tanf": "Não precisa de nada. O condado tem seu registro do WFNJ.",
+      "q8_drug_alcohol_treatment": "Uma carta do seu programa de tratamento",
+      "q9_pregnant": "Uma nota do seu médico ou clínica",
+      "q10_caring_for_ill_person": "Uma nota do médico da pessoa de quem você cuida",
+      "q11_native_american": "Seu documento de inscrição tribal"
+  } as Record<string, string>,
   ex: {
     q1_child_under_14: "Mora uma criança menor de 14 anos no seu domicílio do SNAP",
     q2_unable_to_work: "Você não pode trabalhar agora",
