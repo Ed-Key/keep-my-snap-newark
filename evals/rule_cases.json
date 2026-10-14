@@ -1,0 +1,449 @@
+{
+  "_note": "Fact sheet in, result out. In THESE FIXTURES ONLY, facts not listed default to 'no' (or 0). At runtime, a missing fact is always 'unknown'. Must pass 100%.",
+  "cases": [
+    {
+      "id": "R01",
+      "facts": {
+        "age": 17
+      },
+      "expected": {
+        "status": "NOT_SUBJECT"
+      },
+      "why": "Under 18"
+    },
+    {
+      "id": "R02",
+      "facts": {
+        "age": 65
+      },
+      "expected": {
+        "status": "NOT_SUBJECT"
+      },
+      "why": "65 and over"
+    },
+    {
+      "id": "R03",
+      "facts": {
+        "age": 64
+      },
+      "expected": {
+        "status": "NOT_EXEMPT"
+      },
+      "why": "64 is still subject"
+    },
+    {
+      "id": "R04",
+      "facts": {
+        "age": 40
+      },
+      "expected": {
+        "status": "NOT_EXEMPT"
+      },
+      "why": "All no"
+    },
+    {
+      "id": "R05",
+      "facts": {
+        "age": 52,
+        "unemployment_status": "receiving"
+      },
+      "expected": {
+        "status": "EXEMPT",
+        "exemptions": [
+          "q5_unemployment_receiving"
+        ]
+      },
+      "why": "Maria"
+    },
+    {
+      "id": "R06",
+      "facts": {
+        "age": 62
+      },
+      "expected": {
+        "status": "NOT_EXEMPT"
+      },
+      "why": "Being 60+ exempts from basic work rules but not from the time limit (NJ exemption 4)"
+    },
+    {
+      "id": "R07",
+      "facts": {
+        "age": 62,
+        "unemployment_status": "receiving"
+      },
+      "expected": {
+        "status": "EXEMPT",
+        "exemptions": [
+          "q5_unemployment_receiving"
+        ]
+      },
+      "why": "60 to 64 with a non-age exemption"
+    },
+    {
+      "id": "R08",
+      "facts": {
+        "age": 30,
+        "work_hours_per_week": 30,
+        "weekly_earnings": 200
+      },
+      "expected": {
+        "status": "EXEMPT",
+        "exemptions": [
+          "q4_working_30h_or_earning"
+        ]
+      },
+      "why": "Exactly 30 hours counts"
+    },
+    {
+      "id": "R09",
+      "facts": {
+        "age": 30,
+        "work_hours_per_week": 29,
+        "weekly_earnings": 217.5
+      },
+      "expected": {
+        "status": "EXEMPT",
+        "exemptions": [
+          "q4_working_30h_or_earning"
+        ]
+      },
+      "why": "Earnings boundary is inclusive"
+    },
+    {
+      "id": "R10",
+      "facts": {
+        "age": 30,
+        "work_hours_per_week": 29,
+        "weekly_earnings": 217.49
+      },
+      "expected": {
+        "status": "NOT_EXEMPT"
+      },
+      "why": "One cent short. The 29 hours still count toward the 80"
+    },
+    {
+      "id": "R11",
+      "facts": {
+        "age": 30,
+        "q1_child_under_14_in_snap_household": "yes",
+        "unemployment_status": "receiving"
+      },
+      "expected": {
+        "status": "EXEMPT",
+        "exemptions": [
+          "q1_child_under_14",
+          "q5_unemployment_receiving"
+        ]
+      },
+      "why": "List every exemption that applies"
+    },
+    {
+      "id": "R12",
+      "facts": {
+        "age": 45,
+        "q2_unable_to_work": "yes"
+      },
+      "expected": {
+        "status": "CLAIM_COUNTY_DECIDES",
+        "exemptions": [
+          "q2_unable_to_work"
+        ]
+      },
+      "why": "Unfitness is the county's call"
+    },
+    {
+      "id": "R13",
+      "facts": {
+        "age": 45,
+        "q3_disability_benefits": "yes"
+      },
+      "expected": {
+        "status": "EXEMPT",
+        "exemptions": [
+          "q3_disability_benefits"
+        ]
+      },
+      "why": "Disability benefits"
+    },
+    {
+      "id": "R14",
+      "facts": {
+        "age": 45,
+        "q11_native_american": "yes"
+      },
+      "expected": {
+        "status": "EXEMPT",
+        "exemptions": [
+          "q11_native_american"
+        ]
+      },
+      "why": "Q11"
+    },
+    {
+      "id": "R15",
+      "facts": {
+        "age": 45,
+        "q7_wfnj_tanf_compliant": "yes"
+      },
+      "expected": {
+        "status": "EXEMPT",
+        "exemptions": [
+          "q7_wfnj_tanf"
+        ]
+      },
+      "why": "Q7"
+    },
+    {
+      "id": "R16",
+      "facts": {
+        "age": 24,
+        "q6_student_half_time": "unknown"
+      },
+      "expected": {
+        "status": "NEED_MORE_INFO",
+        "ask": [
+          "q6_student_half_time"
+        ]
+      },
+      "why": "An unknown that could change the result gets asked"
+    },
+    {
+      "id": "R17",
+      "facts": {
+        "age": 52,
+        "q9_pregnant": "unknown",
+        "weekly_earnings": null,
+        "unemployment_status": "receiving"
+      },
+      "expected": {
+        "status": "EXEMPT",
+        "exemptions": [
+          "q5_unemployment_receiving"
+        ]
+      },
+      "why": "Unknowns are never asked once another exemption applies"
+    },
+    {
+      "id": "R18",
+      "facts": {
+        "age": null,
+        "unemployment_status": "receiving"
+      },
+      "expected": {
+        "status": "NEED_MORE_INFO",
+        "ask": [
+          "age"
+        ]
+      },
+      "why": "Age is always required"
+    },
+    {
+      "id": "R19",
+      "facts": {
+        "age": 35,
+        "work_hours_per_week": 20,
+        "weekly_earnings": null
+      },
+      "expected": {
+        "status": "NEED_MORE_INFO",
+        "ask": [
+          "weekly_earnings"
+        ]
+      },
+      "why": "20 hours at an unknown wage could reach $217.50"
+    },
+    {
+      "id": "R20",
+      "facts": {
+        "age": 35,
+        "work_hours_per_week": null,
+        "weekly_earnings": 300
+      },
+      "expected": {
+        "status": "EXEMPT",
+        "exemptions": [
+          "q4_working_30h_or_earning"
+        ]
+      },
+      "why": "Earnings alone settle Q4"
+    },
+    {
+      "id": "R21",
+      "facts": {
+        "age": 34,
+        "work_hours_per_week": 20,
+        "hourly_wage": 17,
+        "weekly_earnings": null
+      },
+      "expected": {
+        "status": "EXEMPT",
+        "exemptions": [
+          "q4_working_30h_or_earning"
+        ]
+      },
+      "why": "Code computes 20 x $17 = $340 >= $217.50"
+    },
+    {
+      "id": "R22",
+      "facts": {
+        "age": 18
+      },
+      "expected": {
+        "status": "NOT_EXEMPT"
+      },
+      "why": "18 is subject"
+    },
+    {
+      "id": "R23",
+      "facts": {
+        "age": 30,
+        "q1_child_under_14_in_snap_household": "yes"
+      },
+      "expected": {
+        "status": "EXEMPT",
+        "exemptions": [
+          "q1_child_under_14"
+        ]
+      },
+      "why": "Q1 alone"
+    },
+    {
+      "id": "R24",
+      "facts": {
+        "age": 22,
+        "q6_student_half_time": "yes"
+      },
+      "expected": {
+        "status": "EXEMPT",
+        "exemptions": [
+          "q6_student_half_time"
+        ]
+      },
+      "why": "Q6 alone"
+    },
+    {
+      "id": "R25",
+      "facts": {
+        "age": 44,
+        "q8_drug_alcohol_treatment": "yes"
+      },
+      "expected": {
+        "status": "EXEMPT",
+        "exemptions": [
+          "q8_drug_alcohol_treatment"
+        ]
+      },
+      "why": "Q8 alone"
+    },
+    {
+      "id": "R26",
+      "facts": {
+        "age": 26,
+        "q9_pregnant": "yes"
+      },
+      "expected": {
+        "status": "EXEMPT",
+        "exemptions": [
+          "q9_pregnant"
+        ]
+      },
+      "why": "Q9 alone"
+    },
+    {
+      "id": "R27",
+      "facts": {
+        "age": 47,
+        "q10_caring_for_ill_person": "yes"
+      },
+      "expected": {
+        "status": "CLAIM_COUNTY_DECIDES",
+        "exemptions": [
+          "q10_caring_for_ill_person"
+        ]
+      },
+      "why": "County verifies incapacity"
+    },
+    {
+      "id": "R28",
+      "facts": {
+        "age": 45,
+        "unemployment_status": "applied"
+      },
+      "expected": {
+        "status": "CLAIM_COUNTY_DECIDES",
+        "exemptions": [
+          "q5_unemployment_applied"
+        ]
+      },
+      "why": "Applied counts only with UI work-requirement compliance (7 CFR 273.7(b)(1)(v))"
+    },
+    {
+      "id": "R29",
+      "facts": {
+        "age": 45,
+        "unemployment_status": "receiving",
+        "q2_unable_to_work": "yes"
+      },
+      "expected": {
+        "status": "EXEMPT",
+        "exemptions": [
+          "q2_unable_to_work",
+          "q5_unemployment_receiving"
+        ]
+      },
+      "why": "Any objective exemption makes it EXEMPT; still list all"
+    },
+    {
+      "id": "R30",
+      "facts": {
+        "age": 30,
+        "monthly_earnings": 943
+      },
+      "expected": {
+        "status": "EXEMPT",
+        "exemptions": [
+          "q4_working_30h_or_earning"
+        ]
+      },
+      "why": "943 x 12 / 52 = 217.62"
+    },
+    {
+      "id": "R31",
+      "facts": {
+        "age": 30,
+        "monthly_earnings": 942
+      },
+      "expected": {
+        "status": "NOT_EXEMPT"
+      },
+      "why": "942 x 12 / 52 = 217.38"
+    },
+    {
+      "id": "R32",
+      "facts": {
+        "age": 30,
+        "work_hours_per_week": 20,
+        "hourly_wage": 10
+      },
+      "expected": {
+        "status": "NOT_EXEMPT",
+        "meets_80_hours": true
+      },
+      "why": "$200 a week is not exempt, but 20 h/week is about 87 h/month, so already meeting the rule"
+    },
+    {
+      "id": "R33",
+      "facts": {
+        "age": 40,
+        "q2_unable_to_work": "unknown"
+      },
+      "expected": {
+        "status": "NEED_MORE_INFO",
+        "ask": [
+          "q2_unable_to_work"
+        ]
+      },
+      "why": "Refused or unanswered stays unknown, never no"
+    }
+  ]
+}

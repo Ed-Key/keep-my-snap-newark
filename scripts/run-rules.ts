@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { decide, type Facts } from "../lib/rules.ts";
 
-const { cases } = JSON.parse(readFileSync(new URL("../../evals/rule_cases.json", import.meta.url), "utf8"));
+const { cases } = JSON.parse(readFileSync(new URL("../evals/rule_cases.json", import.meta.url), "utf8"));
 
 // Fixture convention only: unlisted yes/no facts are "no", unlisted numbers are 0.
 const fixtureDefaults: Facts = {

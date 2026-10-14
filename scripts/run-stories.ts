@@ -1,11 +1,11 @@
 // Grades extraction on evals/stories.json, then simulates follow-ups through decide().
 // Pass bar: >= 95% of listed facts correct, zero confidently wrong, every final result matches.
-// Usage: node --env-file=.env.local scripts/run-stories.ts [STORY-ID ...]
+// Usage: node scripts/run-stories.ts [STORY-ID ...]
 import { readFileSync } from "node:fs";
 import { extract } from "../lib/extract.ts";
 import { decide, type Facts } from "../lib/rules.ts";
 
-const { stories } = JSON.parse(readFileSync(new URL("../../evals/stories.json", import.meta.url), "utf8"));
+const { stories } = JSON.parse(readFileSync(new URL("../evals/stories.json", import.meta.url), "utf8"));
 const only = process.argv.slice(2);
 const todo = only.length ? stories.filter((s: { id: string }) => only.includes(s.id)) : stories;
 

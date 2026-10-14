@@ -1,5 +1,5 @@
 // Story (and optional county-letter photo) -> fact sheet. The AI only fills slots; lib/rules.ts decides.
-// Runs through the Claude Agent SDK on Ed's own Claude Code login (subscription), not an API key.
+// Runs through the Claude Agent SDK: uses ANTHROPIC_API_KEY if set, otherwise the local Claude Code login.
 import { query } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
 import type { Facts } from "./rules.ts";
@@ -66,10 +66,6 @@ export async function extract(story: string, letterImage?: LetterImage): Promise
     yield { type: "user" as const, message: { role: "user" as const, content }, parent_tool_use_id: null, session_id: "" };
   }
 
-  // Drop any API key so the SDK uses the Claude Code subscription login.
-  const env = { ...process.env };
-  delete env.ANTHROPIC_API_KEY;
-
   for await (const msg of query({
     prompt: prompt() as never,
     options: {
@@ -80,7 +76,6 @@ export async function extract(story: string, letterImage?: LetterImage): Promise
       settingSources: [],
       persistSession: false,
       maxTurns: 3,
-      env,
       outputFormat: { type: "json_schema", schema: JSON_SCHEMA as Record<string, unknown> },
     },
   })) {
