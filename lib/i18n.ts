@@ -4,6 +4,7 @@ export type Lang = "en" | "es" | "pt";
 const en = {
   title: "Keep your SNAP",
   tagline: "Free. Private. Nothing is saved.",
+  chooseLang: "Choose your language",
   letterQ: "Got a letter from the county?",
   letterPhoto: "Take a photo of it",
   letterChange: "Change photo",
@@ -141,6 +142,7 @@ const es: Strings = {
   ...en,
   title: "Conserve su SNAP",
   tagline: "Gratis. Privado. No se guarda nada.",
+  chooseLang: "Elija su idioma",
   letterQ: "¿Le llegó una carta del condado?",
   letterPhoto: "Tómele una foto",
   letterChange: "Cambiar foto",
@@ -276,6 +278,7 @@ const pt: Strings = {
   ...en,
   title: "Mantenha seu SNAP",
   tagline: "Grátis. Privado. Nada é salvo.",
+  chooseLang: "Escolha seu idioma",
   letterQ: "Recebeu uma carta do condado?",
   letterPhoto: "Tire uma foto dela",
   letterChange: "Trocar foto",

@@ -1,26 +1,52 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Keep My SNAP brand tokens, shared with the pitch deck. */
+@theme {
+  --color-navy: #13233f;
+  --color-navy-700: #243a63;
+  --color-paper: #f6f4ee;
+  --color-sand: #ece7db;
+  --color-line: #ddd6c6;
+  --color-accent: #c4531e;
+  --color-accent-ink: #9a3f14;
+  --color-accent-soft: #fbeee5;
+  --color-peach: #f0a574;
+  --color-ink: #4a5568;
+  --color-ok: #2e6b4f;
+  --color-ok-soft: #e8f1ec;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-public-sans), system-ui, sans-serif;
+  --font-serif: var(--font-baskerville), Georgia, serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--color-paper);
+  color: var(--color-navy);
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-paper);
+  color: var(--color-navy);
+  font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+input:focus-visible,
+textarea:focus-visible {
+  outline-offset: 1px;
+}
+
+/* A file input hidden inside a label still takes keyboard focus; ring the label. */
+label:has(> input[type="file"]:focus-visible) {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 3px;
 }

@@ -37,11 +37,11 @@ export function PdfPages({ makeBytes, loading }: { makeBytes: () => Promise<Uint
   }, []);
 
   if (failed) return null;
-  if (!pages) return <p className="text-sm text-neutral-600">{loading}</p>;
+  if (!pages) return <p className="text-base text-ink">{loading}</p>;
   return (
     <div className="flex flex-col gap-3">
       {pages.map((src, i) => (
-        <img key={i} src={src} alt={`Page ${i + 1}`} className="w-full rounded-lg border border-neutral-300 bg-white shadow-sm" />
+        <img key={i} src={src} alt={`Page ${i + 1}`} className="w-full rounded-xl border border-line bg-white shadow-sm" />
       ))}
     </div>
   );
