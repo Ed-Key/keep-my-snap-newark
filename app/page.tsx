@@ -225,7 +225,7 @@ export default function Home() {
           <div className="mt-auto flex flex-col gap-2">
             {faxCfg?.enabled && (
               <>
-                {(faxCfg.simulated || !faxCfg.isCounty) && <p className="rounded-lg bg-neutral-200 p-2 text-xs text-neutral-700">{faxCfg.simulated ? t.simNote : t.demoNote}</p>}
+                {!faxCfg.simulated && !faxCfg.isCounty && <p className="rounded-lg bg-neutral-200 p-2 text-xs text-neutral-700">{t.demoNote}</p>}
                 <label className="flex items-start gap-2 text-sm">
                   <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-1 h-5 w-5" />
                   <span>{t.consent}</span>
