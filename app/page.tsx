@@ -1,69 +1,264 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import { decide, type Facts, type Result } from "@/lib/rules.ts";
+import { STRINGS, type Lang } from "@/lib/i18n.ts";
+import type { Extraction } from "@/lib/extract.ts";
+
+type Step = "lang" | "story" | "ask" | "confirm" | "result" | "send";
+type Photo = { mediaType: "image/jpeg"; data: string; preview: string };
+
+// Shrinks a phone photo to a JPEG under ~1 MB so it fits the request limit.
+async function toPhoto(file: File): Promise<Photo> {
+  const bmp = await createImageBitmap(file);
+  const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bmp.width * scale);
+  canvas.height = Math.round(bmp.height * scale);
+  canvas.getContext("2d")!.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+  const url = canvas.toDataURL("image/jpeg", 0.85);
+  return { mediaType: "image/jpeg", data: url.split(",")[1], preview: url };
+}
+
+const daysUntil = (iso: string | null) => {
+  if (!iso) return null;
+  const d = Math.ceil((new Date(iso + "T23:59:59").getTime() - Date.now()) / 86_400_000);
+  return d >= 0 ? d : null;
+};
+
+const btn = "w-full rounded-xl px-4 py-3 text-center text-base font-semibold";
+const primary = `${btn} bg-blue-700 text-white active:bg-blue-800 disabled:opacity-50`;
+const secondary = `${btn} border border-neutral-300 bg-white text-neutral-900 active:bg-neutral-100`;
 
 export default function Home() {
+  const [lang, setLang] = useState<Lang>("es");
+  const [step, setStep] = useState<Step>("lang");
+  const [story, setStory] = useState("");
+  const [letter, setLetter] = useState<Photo | null>(null);
+  const [proof, setProof] = useState<Photo | null>(null);
+  const [extraction, setExtraction] = useState<Extraction | null>(null);
+  const [facts, setFacts] = useState<Facts | null>(null);
+  const [caseNumber, setCaseNumber] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const t = STRINGS[lang];
+  const result: Result | null = facts ? decide(facts) : null;
+
+  async function submitStory() {
+    setBusy(true); setError("");
+    try {
+      const res = await fetch("/api/extract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ story, letterImage: letter ? { mediaType: letter.mediaType, data: letter.data } : undefined }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? t.error);
+      setExtraction(json);
+      setFacts(json.facts);
+      setCaseNumber(json.letter.case_number ?? "");
+      setStep(decide(json.facts).status === "NEED_MORE_INFO" ? "ask" : "confirm");
+    } catch (e) {
+      setError((e as Error).message || t.error);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function answer(key: string, value: string | number) {
+    const next = { ...facts!, [key]: value } as Facts;
+    setFacts(next);
+    if (decide(next).status !== "NEED_MORE_INFO") setStep("confirm");
+  }
+
+  function restart() {
+    setStep("lang"); setStory(""); setLetter(null); setProof(null); setExtraction(null); setFacts(null); setCaseNumber(""); setError("");
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-4 bg-neutral-50 px-4 py-6 text-neutral-900">
+      <header className="flex items-center justify-between">
+        <h1 className="text-xl font-bold">{t.title}</h1>
+        {step !== "lang" && <button onClick={restart} className="text-sm text-blue-700 underline">{t.startOver}</button>}
+      </header>
+
+      {step === "lang" && (
+        <section className="flex flex-1 flex-col gap-3">
+          <p className="text-neutral-600">{t.tagline}</p>
+          <div className="mt-auto flex flex-col gap-3">
+            {(["es", "pt", "en"] as Lang[]).map((l) => (
+              <button key={l} className={secondary} onClick={() => { setLang(l); setStep("story"); }}>
+                {{ es: "Español", pt: "Português", en: "English" }[l]}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {step === "story" && (
+        <section className="flex flex-1 flex-col gap-3">
+          <h2 className="text-lg font-semibold">{t.letterQ}</h2>
+          <label className={letter ? secondary : primary}>
+            {letter ? t.letterChange : t.letterPhoto}
+            <input type="file" accept="image/*" capture="environment" className="hidden"
+              onChange={async (e) => { const f = e.target.files?.[0]; if (f) setLetter(await toPhoto(f)); }} />
+          </label>
+          {letter ? <img src={letter.preview} alt="" className="max-h-40 rounded-lg object-contain" /> : <p className="text-sm text-neutral-600">{t.letterHint}</p>}
+          <h2 className="mt-2 text-lg font-semibold">{t.storyQ}</h2>
+          <textarea value={story} onChange={(e) => setStory(e.target.value)} rows={5} maxLength={4000}
+            placeholder={t.storyPlaceholder} className="rounded-xl border border-neutral-300 bg-white p-3 text-base" />
+          {error && <p className="text-sm text-red-700">{error}</p>}
+          <button className={`${primary} mt-auto`} disabled={busy || !story.trim()} onClick={submitStory}>
+            {busy ? t.reading : t.continue}
+          </button>
+        </section>
+      )}
+
+      {step === "ask" && result?.status === "NEED_MORE_INFO" && (
+        <section className="flex flex-col gap-4">
+          <h2 className="text-lg font-semibold">{t.askTitle}</h2>
+          <Question key={result.ask[0]} k={result.ask[0]} t={t} onAnswer={answer} />
+        </section>
+      )}
+
+      {step === "confirm" && facts && (
+        <section className="flex flex-1 flex-col gap-3">
+          <h2 className="text-lg font-semibold">{t.confirmTitle}</h2>
+          <div className="rounded-xl border border-neutral-200 bg-white p-3">
+            <label className="text-sm font-medium">{t.caseNumber} {extraction?.letter.case_number && <span className="text-neutral-500">{t.fromLetter}</span>}</label>
+            <input value={caseNumber} onChange={(e) => setCaseNumber(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-300 p-2 text-base" />
+            {!caseNumber && <p className="mt-1 text-xs text-neutral-600">{t.caseNumberHint}</p>}
+          </div>
+          <FactRows facts={facts} t={t} />
+          <div className="mt-auto flex gap-2">
+            <button className={secondary} onClick={() => setStep("story")}>{t.fix}</button>
+            <button className={primary} onClick={() => setStep("result")}>{t.correct}</button>
+          </div>
+        </section>
+      )}
+
+      {step === "result" && result && (
+        <section className="flex flex-1 flex-col gap-3">
+          <ResultCard result={result} t={t} />
+          {daysUntil(extraction?.letter.hearing_request_deadline ?? null) != null && (
+            <p className="rounded-xl bg-red-50 p-3 font-semibold text-red-800">{t.daysLeft(daysUntil(extraction!.letter.hearing_request_deadline)!)}</p>
+          )}
+          {(result.status === "EXEMPT" || result.status === "CLAIM_COUNTY_DECIDES") && (
+            <button className={`${primary} mt-auto`} onClick={() => setStep("send")}>{t.seeWhatToDo}</button>
+          )}
+        </section>
+      )}
+
+      {step === "send" && result && "exemptions" in result && (
+        <section className="flex flex-1 flex-col gap-3">
+          <h2 className="text-lg font-semibold">{t.stepsTitle}</h2>
+          <ol className="flex flex-col gap-3">
+            <li className="rounded-xl border border-neutral-200 bg-white p-3">
+              <p className="font-semibold">1. {t.step1}</p>
+              <ul className="mt-1 list-disc pl-5 text-sm text-neutral-700">
+                {result.exemptions.map((e) => <li key={e.id}>{e.proof}</li>)}
+              </ul>
+              <label className={`${proof ? secondary : primary} mt-2 block`}>
+                {proof ? `✓ ${t.proofAdded}` : t.takeProof}
+                <input type="file" accept="image/*" capture="environment" className="hidden"
+                  onChange={async (e) => { const f = e.target.files?.[0]; if (f) setProof(await toPhoto(f)); }} />
+              </label>
+            </li>
+            <li className="rounded-xl border border-neutral-200 bg-white p-3">
+              <p className="font-semibold">2. {t.step2}</p>
+              <p className="text-sm text-neutral-700">{t.step2Body}</p>
+            </li>
+            <li className="rounded-xl border border-neutral-200 bg-white p-3">
+              <p className="font-semibold">3. {t.step3}</p>
+              <p className="text-sm text-neutral-700">{t.step3Body}</p>
+            </li>
+          </ol>
+          <button className={`${primary} mt-auto`} disabled>{t.downloadForm}</button>
+        </section>
+      )}
+    </main>
+  );
+}
+
+function Question({ k, t, onAnswer }: { k: string; t: (typeof STRINGS)["en"]; onAnswer: (k: string, v: string | number) => void }) {
+  const [num, setNum] = useState("");
+  const numeric = k === "age" || k === "work_hours_per_week" || k === "weekly_earnings";
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4">
+      <p className="text-base">{t.q[k]}</p>
+      {numeric ? (
+        <>
+          <input inputMode="decimal" value={num} onChange={(e) => setNum(e.target.value.replace(/[^0-9.]/g, ""))}
+            className="rounded-lg border border-neutral-300 p-3 text-lg" />
+          <button className={primary} disabled={!num} onClick={() => onAnswer(k, Number(num))}>{t.continue}</button>
+        </>
+      ) : k === "unemployment_status" ? (
+        (["receiving", "applied", "no"] as const).map((v) => <button key={v} className={secondary} onClick={() => onAnswer(k, v)}>{t.ui[v]}</button>)
+      ) : (
+        <div className="flex gap-2">
+          <button className={secondary} onClick={() => onAnswer(k, "yes")}>{t.yes}</button>
+          <button className={secondary} onClick={() => onAnswer(k, "no")}>{t.no}</button>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      )}
     </div>
   );
+}
+
+function FactRows({ facts, t }: { facts: Facts; t: (typeof STRINGS)["en"] }) {
+  const rows: [string, string][] = [];
+  if (facts.age != null) rows.push([t.age, String(facts.age)]);
+  if (facts.work_hours_per_week != null) rows.push([t.hours, String(facts.work_hours_per_week)]);
+  if (facts.hourly_wage != null) rows.push([t.wage, `$${facts.hourly_wage}`]);
+  if (facts.weekly_earnings != null) rows.push([t.weekly, `$${facts.weekly_earnings}`]);
+  if (facts.monthly_earnings != null) rows.push([t.monthly, `$${facts.monthly_earnings}`]);
+  if (facts.unemployment_status !== "unknown") rows.push([t.q.unemployment_status, t.ui[facts.unemployment_status]]);
+  for (const [k, v] of Object.entries(facts)) {
+    if (k.startsWith("q") && (v === "yes" || v === "no")) rows.push([t.q[k], v === "yes" ? t.yes : t.no]);
+  }
+  return (
+    <div className="divide-y divide-neutral-200 rounded-xl border border-neutral-200 bg-white">
+      {rows.map(([label, value]) => (
+        <div key={label} className="flex justify-between gap-3 p-3 text-sm"><span>{label}</span><span className="font-semibold">{value}</span></div>
+      ))}
+    </div>
+  );
+}
+
+function ResultCard({ result, t }: { result: Result; t: (typeof STRINGS)["en"] }) {
+  if (result.status === "EXEMPT" || result.status === "CLAIM_COUNTY_DECIDES") {
+    const claim = result.status === "CLAIM_COUNTY_DECIDES";
+    return (
+      <>
+        <div className={`rounded-xl p-4 ${claim ? "bg-amber-50 text-amber-900" : "bg-green-50 text-green-900"}`}>
+          <p className="text-lg font-bold">{claim ? t.claimTitle : t.exemptTitle}</p>
+          {result.exemptions.map((e) => <p key={e.id}>{t.ex[e.id]}</p>)}
+          {claim && <p className="mt-1 text-sm">{t.claimNote}</p>}
+        </div>
+        <div className="rounded-xl bg-orange-50 p-4 text-orange-900">
+          <p className="text-lg font-bold">{t.onlyCounts}</p>
+          <p>{t.doThisWeek}</p>
+        </div>
+        <p className="text-sm text-neutral-600">{t.countyFinal}</p>
+        <p className="text-xs text-neutral-500">{result.exemptions.map((e) => e.cite).join(" · ")}</p>
+      </>
+    );
+  }
+  if (result.status === "NOT_EXEMPT") {
+    return (
+      <div className="rounded-xl bg-white p-4">
+        <p className="text-lg font-bold">{t.notExemptTitle}</p>
+        <p>{t.notExemptBody}</p>
+        {result.meets80Hours && <p className="mt-2 text-green-800">{t.meets80}</p>}
+      </div>
+    );
+  }
+  if (result.status === "NOT_SUBJECT") {
+    return (
+      <div className="rounded-xl bg-white p-4">
+        <p className="text-lg font-bold">{t.notSubjectTitle}</p>
+        <p>{t.notSubjectBody}</p>
+      </div>
+    );
+  }
+  return null;
 }
