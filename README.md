@@ -29,7 +29,7 @@ The AI step uses the [Claude Agent SDK](https://code.claude.com/docs/en/agent-sd
 npm run dev
 ```
 
-Open http://localhost:3000 on a phone-sized window. For the demo, use `demo/sample-county-letter.pdf`, a clearly labeled fake letter for a fictional resident.
+Open http://localhost:3000 on a phone-sized window. For the demo, use the sample county letter, a clearly labeled fake letter for a fictional resident. Print `demo/sample-county-letter.pdf` and photograph it, or on a laptop pick `demo/sample-county-letter.png` in the photo step.
 
 ## Tests
 
