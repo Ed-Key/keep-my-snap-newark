@@ -4,6 +4,7 @@ import { useState } from "react";
 import { decide, type Facts, type Result } from "@/lib/rules.ts";
 import { STRINGS, type Lang } from "@/lib/i18n.ts";
 import type { Extraction } from "@/lib/extract.ts";
+import { buildSnap29Pdf } from "@/lib/pdf.ts";
 
 type Step = "lang" | "story" | "ask" | "confirm" | "result" | "send";
 type Photo = { mediaType: "image/jpeg"; data: string; preview: string };
@@ -39,6 +40,7 @@ export default function Home() {
   const [extraction, setExtraction] = useState<Extraction | null>(null);
   const [facts, setFacts] = useState<Facts | null>(null);
   const [caseNumber, setCaseNumber] = useState("");
+  const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const t = STRINGS[lang];
@@ -71,8 +73,21 @@ export default function Home() {
     if (decide(next).status !== "NEED_MORE_INFO") setStep("confirm");
   }
 
+  async function getForm() {
+    if (!facts || !result || !("exemptions" in result)) return;
+    const bytes = await buildSnap29Pdf({ name, caseNumber, facts, exemptions: result.exemptions, proofJpegBase64: proof?.data });
+    const file = new File([bytes as BlobPart], `SNAP-29-${caseNumber || "form"}.pdf`, { type: "application/pdf" });
+    if (navigator.canShare?.({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: file.name }); return; } catch { /* fall back to download */ }
+    }
+    const url = URL.createObjectURL(file);
+    const a = Object.assign(document.createElement("a"), { href: url, download: file.name });
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
+  }
+
   function restart() {
-    setStep("lang"); setStory(""); setLetter(null); setProof(null); setExtraction(null); setFacts(null); setCaseNumber(""); setError("");
+    setStep("lang"); setStory(""); setLetter(null); setProof(null); setExtraction(null); setFacts(null); setCaseNumber(""); setName(""); setError("");
   }
 
   return (
@@ -125,6 +140,10 @@ export default function Home() {
         <section className="flex flex-1 flex-col gap-3">
           <h2 className="text-lg font-semibold">{t.confirmTitle}</h2>
           <div className="rounded-xl border border-neutral-200 bg-white p-3">
+            <label className="text-sm font-medium">{t.yourName}</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" className="mt-1 w-full rounded-lg border border-neutral-300 p-2 text-base" />
+          </div>
+          <div className="rounded-xl border border-neutral-200 bg-white p-3">
             <label className="text-sm font-medium">{t.caseNumber} {extraction?.letter.case_number && <span className="text-neutral-500">{t.fromLetter}</span>}</label>
             <input value={caseNumber} onChange={(e) => setCaseNumber(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-300 p-2 text-base" />
             {!caseNumber && <p className="mt-1 text-xs text-neutral-600">{t.caseNumberHint}</p>}
@@ -173,7 +192,8 @@ export default function Home() {
               <p className="text-sm text-neutral-700">{t.step3Body}</p>
             </li>
           </ol>
-          <button className={`${primary} mt-auto`} disabled>{t.downloadForm}</button>
+          <button className={`${primary} mt-auto`} disabled={!name.trim() || !caseNumber.trim()} onClick={getForm}>{t.downloadForm}</button>
+          {(!name.trim() || !caseNumber.trim()) && <p className="text-sm text-neutral-600">{t.needNameCase}</p>}
         </section>
       )}
     </main>
