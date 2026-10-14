@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { decide, type Facts, type Result } from "@/lib/rules.ts";
 import { STRINGS, type Lang } from "@/lib/i18n.ts";
 import type { Extraction } from "@/lib/extract.ts";
@@ -42,6 +42,9 @@ export default function Home() {
   const [caseNumber, setCaseNumber] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [faxCfg, setFaxCfg] = useState<{ enabled: boolean; isCounty: boolean } | null>(null);
+  const [consent, setConsent] = useState(false);
+  const [fax, setFax] = useState<{ state: "sending" | "queued" | "delivered" | "failed"; id?: string } | null>(null);
   const [error, setError] = useState("");
   const t = STRINGS[lang];
   const result: Result | null = facts ? decide(facts) : null;
@@ -73,9 +76,36 @@ export default function Home() {
     if (decide(next).status !== "NEED_MORE_INFO") setStep("confirm");
   }
 
+  useEffect(() => {
+    if (step === "send" && !faxCfg) fetch("/api/fax").then((r) => r.json()).then(setFaxCfg).catch(() => setFaxCfg({ enabled: false, isCounty: false }));
+  }, [step, faxCfg]);
+
+  const formBytes = () => buildSnap29Pdf({ name, caseNumber, facts: facts!, exemptions: result && "exemptions" in result ? result.exemptions : [], proofJpegBase64: proof?.data });
+
+  async function sendToCounty() {
+    setFax({ state: "sending" });
+    try {
+      const bytes = await formBytes();
+      let bin = "";
+      for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+      const res = await fetch("/api/fax", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pdf: btoa(bin), reference: caseNumber, consent }) });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
+      setFax({ state: "queued", id: json.friendlyID || json.faxID });
+      for (let i = 0; i < 60; i++) {
+        await new Promise((r) => setTimeout(r, 4000));
+        const st = await fetch(`/api/fax/status?id=${encodeURIComponent(json.faxID)}`).then((r) => r.json()).catch(() => ({}));
+        if (st.status === "successful") { setFax({ state: "delivered", id: json.friendlyID || json.faxID }); return; }
+        if (st.status === "failed") { setFax({ state: "failed" }); return; }
+      }
+    } catch {
+      setFax({ state: "failed" });
+    }
+  }
+
   async function getForm() {
     if (!facts || !result || !("exemptions" in result)) return;
-    const bytes = await buildSnap29Pdf({ name, caseNumber, facts, exemptions: result.exemptions, proofJpegBase64: proof?.data });
+    const bytes = await formBytes();
     const file = new File([bytes as BlobPart], `SNAP-29-${caseNumber || "form"}.pdf`, { type: "application/pdf" });
     if (navigator.canShare?.({ files: [file] })) {
       try { await navigator.share({ files: [file], title: file.name }); return; } catch { /* fall back to download */ }
@@ -87,7 +117,7 @@ export default function Home() {
   }
 
   function restart() {
-    setStep("lang"); setStory(""); setLetter(null); setProof(null); setExtraction(null); setFacts(null); setCaseNumber(""); setName(""); setError("");
+    setStep("lang"); setStory(""); setLetter(null); setProof(null); setExtraction(null); setFacts(null); setCaseNumber(""); setName(""); setError(""); setConsent(false); setFax(null);
   }
 
   return (
@@ -192,7 +222,24 @@ export default function Home() {
               <p className="text-sm text-neutral-700">{t.step3Body}</p>
             </li>
           </ol>
-          <button className={`${primary} mt-auto`} disabled={!name.trim() || !caseNumber.trim()} onClick={getForm}>{t.downloadForm}</button>
+          <div className="mt-auto flex flex-col gap-2">
+            {faxCfg?.enabled && (
+              <>
+                {!faxCfg.isCounty && <p className="rounded-lg bg-neutral-200 p-2 text-xs text-neutral-700">{t.demoNote}</p>}
+                <label className="flex items-start gap-2 text-sm">
+                  <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-1 h-5 w-5" />
+                  <span>{t.consent}</span>
+                </label>
+                <button className={primary} disabled={!consent || !name.trim() || !caseNumber.trim() || (fax !== null && fax.state !== "failed")} onClick={sendToCounty}>{t.sendCounty}</button>
+                {fax && (
+                  <p role="status" className={`rounded-lg p-3 text-sm font-semibold ${fax.state === "delivered" ? "bg-green-50 text-green-900" : fax.state === "failed" ? "bg-red-50 text-red-800" : "bg-blue-50 text-blue-900"}`}>
+                    {fax.state === "sending" ? t.faxSending : fax.state === "queued" ? t.faxQueued : fax.state === "delivered" ? t.faxDelivered(fax.id!) : t.faxFailed}
+                  </p>
+                )}
+              </>
+            )}
+            <button className={faxCfg?.enabled ? secondary : primary} disabled={!name.trim() || !caseNumber.trim()} onClick={getForm}>{faxCfg?.enabled ? t.shareInstead : t.downloadForm}</button>
+          </div>
           {(!name.trim() || !caseNumber.trim()) && <p className="text-sm text-neutral-600">{t.needNameCase}</p>}
         </section>
       )}
