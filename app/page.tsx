@@ -443,7 +443,7 @@ function FactRows({ facts, t }: { facts: Facts; t: (typeof STRINGS)["en"] }) {
   return (
     <dl className="divide-y divide-line rounded-2xl border border-line bg-white">
       {rows.map(([label, value]) => (
-        <div key={label} className="flex justify-between gap-4 px-4 py-3 text-base"><dt className="text-ink">{label}</dt><dd className="shrink-0 text-right font-semibold text-navy">{value}</dd></div>
+        <div key={label} className="flex justify-between gap-4 px-4 py-3 text-base"><dt className="text-ink">{label}</dt><dd className="text-right font-semibold text-navy">{value}</dd></div>
       ))}
     </dl>
   );
