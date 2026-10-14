@@ -21,10 +21,13 @@ async function toPhoto(file: File): Promise<Photo> {
   return { mediaType: "image/jpeg", data: url.split(",")[1], preview: url };
 }
 
+// Whole calendar days from today to the deadline date (Oct 14 -> Oct 24 is 10).
 const daysUntil = (iso: string | null) => {
-  if (!iso) return null;
-  const d = Math.ceil((new Date(iso + "T23:59:59").getTime() - Date.now()) / 86_400_000);
-  return d >= 0 ? d : null;
+  if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+  const [y, m, d] = iso.split("-").map(Number);
+  const now = new Date();
+  const days = Math.round((Date.UTC(y, m - 1, d) - Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())) / 86_400_000);
+  return days >= 0 ? days : null;
 };
 
 const btn = "w-full rounded-xl px-4 py-3 text-center text-base font-semibold";
