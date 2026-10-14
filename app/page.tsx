@@ -5,8 +5,9 @@ import { decide, type Facts, type Result } from "@/lib/rules.ts";
 import { STRINGS, type Lang } from "@/lib/i18n.ts";
 import type { Extraction } from "@/lib/extract.ts";
 import { buildSnap29Pdf } from "@/lib/pdf.ts";
+import { PdfPages } from "./pdf-pages";
 
-type Step = "lang" | "story" | "ask" | "confirm" | "result" | "send";
+type Step = "lang" | "story" | "ask" | "confirm" | "result" | "send" | "done";
 type Photo = { mediaType: "image/jpeg"; data: string; preview: string };
 
 // Shrinks a phone photo to a JPEG under ~1 MB so it fits the request limit.
@@ -30,6 +31,10 @@ const daysUntil = (iso: string | null) => {
   return days >= 0 ? days : null;
 };
 
+const CheckIcon = ({ className }: { className: string }) => (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className={className}><circle cx="12" cy="12" r="11" fill="currentColor" /><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+);
+
 const btn = "w-full rounded-xl px-4 py-3 text-center text-base font-semibold";
 const primary = `${btn} bg-blue-700 text-white active:bg-blue-800 disabled:opacity-50`;
 const secondary = `${btn} border border-neutral-300 bg-white text-neutral-900 active:bg-neutral-100`;
@@ -49,8 +54,14 @@ export default function Home() {
   const [consent, setConsent] = useState(false);
   const [fax, setFax] = useState<{ state: "sending" | "queued" | "delivered" | "failed"; id?: string; rawId?: string } | null>(null);
   const [error, setError] = useState("");
+  const [skipped, setSkipped] = useState<string[]>([]);
+  const [history, setHistory] = useState<{ key: string; prev: unknown }[]>([]);
+  const [showPreview, setShowPreview] = useState(false);
+  const [sentAt, setSentAt] = useState<Date | null>(null);
   const t = STRINGS[lang];
   const result: Result | null = facts ? decide(facts) : null;
+  // Questions still to ask: what the rules need, minus anything answered "not sure".
+  const pending = result?.status === "NEED_MORE_INFO" ? result.ask.filter((k) => !skipped.includes(k)) : [];
 
   async function submitStory() {
     setBusy(true); setError("");
@@ -65,6 +76,7 @@ export default function Home() {
       setExtraction(json);
       setFacts(json.facts);
       setCaseNumber(json.letter.case_number ?? "");
+      setSkipped([]); setHistory([]);
       setStep(decide(json.facts).status === "NEED_MORE_INFO" ? "ask" : "confirm");
     } catch (e) {
       console.error(e); setError(t.error);
@@ -74,9 +86,21 @@ export default function Home() {
   }
 
   function answer(key: string, value: string | number) {
-    const next = { ...facts!, [key]: value } as Facts;
+    setHistory([...history, { key, prev: (facts as Record<string, unknown>)[key] }]);
+    const nextSkipped = value === "unknown" ? [...skipped, key] : skipped;
+    setSkipped(nextSkipped);
+    const next = (value === "unknown" ? facts! : { ...facts!, [key]: value }) as Facts;
     setFacts(next);
-    if (decide(next).status !== "NEED_MORE_INFO") setStep("confirm");
+    const r = decide(next);
+    if (r.status !== "NEED_MORE_INFO" || r.ask.every((k) => nextSkipped.includes(k))) setStep("confirm");
+  }
+
+  function goBack() {
+    const last = history[history.length - 1];
+    if (!last) { setStep("story"); return; }
+    setHistory(history.slice(0, -1));
+    setSkipped(skipped.filter((k) => k !== last.key));
+    setFacts({ ...facts!, [last.key]: last.prev } as Facts);
   }
 
   useEffect(() => {
@@ -98,7 +122,7 @@ export default function Home() {
       for (let i = 0; i < 60; i++) {
         await new Promise((r) => setTimeout(r, 4000));
         const st = await fetch(`/api/fax/status?id=${encodeURIComponent(json.faxID)}`).then((r) => r.json()).catch(() => ({}));
-        if (st.status === "successful") { setFax({ state: "delivered", id: json.friendlyID || json.faxID, rawId: json.faxID }); return; }
+        if (st.status === "successful") { setFax({ state: "delivered", id: json.friendlyID || json.faxID, rawId: json.faxID }); setSentAt(new Date()); setStep("done"); return; }
         if (st.status === "failed") { setFax({ state: "failed" }); return; }
       }
     } catch {
@@ -121,7 +145,7 @@ export default function Home() {
   }
 
   function restart() {
-    setStep("lang"); setStory(""); setLetter(null); setProof(null); setExtraction(null); setFacts(null); setCaseNumber(""); setName(""); setError(""); setConsent(false); setFax(null);
+    setStep("lang"); setStory(""); setLetter(null); setProof(null); setExtraction(null); setFacts(null); setCaseNumber(""); setName(""); setError(""); setConsent(false); setFax(null); setSkipped([]); setHistory([]); setShowPreview(false); setSentAt(null);
   }
 
   return (
@@ -163,10 +187,16 @@ export default function Home() {
         </section>
       )}
 
-      {step === "ask" && result?.status === "NEED_MORE_INFO" && (
-        <section className="flex flex-col gap-4">
-          <h2 className="text-lg font-semibold">{t.askTitle}</h2>
-          <Question key={result.ask[0]} k={result.ask[0]} t={t} onAnswer={answer} />
+      {step === "ask" && pending.length > 0 && (
+        <section className="flex flex-1 flex-col gap-4">
+          <div className="flex items-center gap-3">
+            <button onClick={goBack} className="rounded-full border border-neutral-300 bg-white px-3 py-1 text-sm">← {t.back}</button>
+            <div className="h-2 flex-1 overflow-hidden rounded-full bg-neutral-200">
+              <div className="h-full rounded-full bg-blue-700 transition-all" style={{ width: `${(history.length / (history.length + pending.length)) * 100}%` }} />
+            </div>
+          </div>
+          <p className="text-sm font-medium text-neutral-600">{t.questionOf(history.length + 1, history.length + pending.length)}</p>
+          <Question key={pending[0] + history.length} k={pending[0]} t={t} onAnswer={answer} />
         </section>
       )}
 
@@ -191,7 +221,7 @@ export default function Home() {
       )}
 
       {step === "result" && result && (
-        <section className="flex flex-1 flex-col gap-3">
+        <section className="flex flex-1 flex-col gap-4">
           <ResultCard result={result} t={t} />
           {daysUntil(extraction?.letter.hearing_request_deadline ?? null) != null && (
             <div className="rounded-xl bg-red-50 p-3 text-red-800"><p className="font-semibold">{t.daysLeft(daysUntil(extraction!.letter.hearing_request_deadline)!)}</p><p className="text-sm">{t.hearingHow}</p></div>
@@ -232,6 +262,8 @@ export default function Home() {
             <label htmlFor="case2" className="text-sm font-medium">{t.caseNumber}</label>
             <input id="case2" value={caseNumber} onChange={(e) => setCaseNumber(e.target.value)} className="w-full rounded-lg border border-neutral-300 p-2 text-base" />
           </div>
+          <button className={secondary} disabled={!name.trim() || !caseNumber.trim()} onClick={() => setShowPreview(!showPreview)}>{showPreview ? t.hidePreview : t.previewForm}</button>
+          {showPreview && <PdfPages key={`${name}|${caseNumber}|${proof ? "p" : ""}`} makeBytes={formBytes} loading={t.loadingForm} />}
           {error && <p className="text-sm text-red-700">{error}</p>}
           <div className="mt-auto flex flex-col gap-2">
             {faxCfg?.enabled && (
@@ -257,6 +289,30 @@ export default function Home() {
 
         </section>
       )}
+
+      {step === "done" && (
+        <section className="flex flex-1 flex-col gap-4">
+          <div className="flex flex-col items-center gap-3 py-4 text-center">
+            <CheckIcon className="h-20 w-20 text-green-600" />
+            <h2 className="text-2xl font-bold">{t.sentTitle}</h2>
+          </div>
+          <div className="divide-y divide-neutral-200 rounded-xl border border-neutral-200 bg-white text-sm">
+            <div className="flex justify-between p-3"><span className="text-neutral-600">{t.receiptLabel}</span><span className="font-mono font-semibold">{fax?.id}</span></div>
+            <div className="flex justify-between p-3"><span className="text-neutral-600">{t.sentAt}</span><span className="font-semibold">{sentAt?.toLocaleString(lang === "en" ? "en-US" : lang === "es" ? "es-US" : "pt-BR", { dateStyle: "medium", timeStyle: "short" })}</span></div>
+            <div className="flex justify-between p-3"><span className="text-neutral-600">{t.caseNumber}</span><span className="font-semibold">{caseNumber}</span></div>
+          </div>
+          <div className="rounded-xl bg-blue-50 p-4 text-blue-950">
+            <p className="font-semibold">{t.nextTitle}</p>
+            <p className="mt-1 text-sm">{t.nextBody}</p>
+          </div>
+          <h3 className="font-semibold">{t.yourForm}</h3>
+          <PdfPages makeBytes={formBytes} loading={t.loadingForm} />
+          <div className="mt-2 flex flex-col gap-2">
+            <button className={primary} onClick={getForm}>{t.saveCopy}</button>
+            <button className={secondary} onClick={restart}>{t.startOver}</button>
+          </div>
+        </section>
+      )}
     </main>
   );
 }
@@ -265,20 +321,22 @@ function Question({ k, t, onAnswer }: { k: string; t: (typeof STRINGS)["en"]; on
   const [num, setNum] = useState("");
   const numeric = k === "age" || k === "work_hours_per_week" || k === "weekly_earnings";
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-neutral-200 bg-white p-4">
-      <p className="text-base">{t.q[k]}</p>
+    <div className="flex flex-col gap-3">
+      <p className="text-2xl font-bold leading-snug">{t.q[k]}</p>
+      {t.help[k] && <p className="text-base text-neutral-600">{t.help[k]}</p>}
       {numeric ? (
         <>
           <input inputMode="decimal" value={num} onChange={(e) => setNum(e.target.value.replace(/[^0-9.]/g, ""))}
-            className="rounded-lg border border-neutral-300 p-3 text-lg" />
-          <button className={primary} disabled={!num} onClick={() => onAnswer(k, Number(num))}>{t.continue}</button>
+            aria-label={t.q[k]} className="mt-2 rounded-xl border border-neutral-300 bg-white p-4 text-2xl" />
+          <button className={primary} disabled={!num || Number.isNaN(Number(num))} onClick={() => onAnswer(k, Number(num))}>{t.continue}</button>
+          {k !== "age" && <button className="py-2 text-center text-base text-blue-700 underline" onClick={() => onAnswer(k, "unknown")}>{t.dontKnow}</button>}
         </>
-      ) : k === "unemployment_status" ? (
-        (["receiving", "applied", "no"] as const).map((v) => <button key={v} className={secondary} onClick={() => onAnswer(k, v)}>{t.ui[v]}</button>)
       ) : (
-        <div className="flex gap-2">
-          <button className={secondary} onClick={() => onAnswer(k, "yes")}>{t.yes}</button>
-          <button className={secondary} onClick={() => onAnswer(k, "no")}>{t.no}</button>
+        <div className="mt-2 flex flex-col gap-3">
+          {(k === "unemployment_status" ? (["receiving", "applied", "no"] as const).map((v) => [v, t.ui[v]] as const) : ([["yes", t.yes], ["no", t.no]] as const)).map(([v, label]) => (
+            <button key={v} className={`${secondary} py-4 text-left text-lg`} onClick={() => onAnswer(k, v)}>{label}</button>
+          ))}
+          <button className="py-2 text-center text-base text-blue-700 underline" onClick={() => onAnswer(k, "unknown")}>{t.dontKnow}</button>
         </div>
       )}
     </div>
@@ -310,10 +368,20 @@ function ResultCard({ result, t }: { result: Result; t: (typeof STRINGS)["en"] }
     const claim = result.status === "CLAIM_COUNTY_DECIDES";
     return (
       <>
-        <div className={`rounded-xl p-4 ${claim ? "bg-amber-50 text-amber-900" : "bg-green-50 text-green-900"}`}>
-          <p className="text-lg font-bold">{claim ? t.claimTitle : t.exemptTitle}</p>
-          {result.exemptions.map((e) => <p key={e.id}>{t.ex[e.id]}</p>)}
-          {claim && <p className="mt-1 text-sm">{t.claimNote}</p>}
+        <div className="flex flex-col items-center gap-3 pt-2 text-center">
+          {claim
+            ? <div aria-hidden="true" className="flex h-20 w-20 items-center justify-center rounded-full bg-amber-500 text-4xl font-bold text-white">?</div>
+            : <CheckIcon className="h-20 w-20 text-green-600" />}
+          <h2 className="text-2xl font-bold leading-snug">{claim ? t.claimTitle : t.exemptTitle}</h2>
+          {claim && <p className="text-sm text-neutral-700">{t.claimNote}</p>}
+        </div>
+        <div className="rounded-xl border border-neutral-200 bg-white p-4">
+          <p className="text-sm font-semibold text-neutral-600">{t.qualifyFor}</p>
+          <ul className="mt-2 flex flex-col gap-2">
+            {result.exemptions.map((e) => (
+              <li key={e.id} className="flex items-start gap-2"><CheckIcon className={`mt-0.5 h-5 w-5 shrink-0 ${claim ? "text-amber-500" : "text-green-600"}`} /><span>{t.ex[e.id]}</span></li>
+            ))}
+          </ul>
         </div>
         <div className="rounded-xl bg-orange-50 p-4 text-orange-900">
           <p className="text-lg font-bold">{t.onlyCounts}</p>
@@ -339,6 +407,15 @@ function ResultCard({ result, t }: { result: Result; t: (typeof STRINGS)["en"] }
         </ul>
         <p className="mt-3 text-sm">{t.neGoodReason}</p>
         <p className="mt-2 text-sm">{t.neStopped}</p>
+      </div>
+    );
+  }
+  if (result.status === "NEED_MORE_INFO") {
+    return (
+      <div className="rounded-xl bg-white p-4">
+        <p className="text-lg font-bold">{t.unsureTitle}</p>
+        <p>{t.unsureBody}</p>
+        <p className="mt-3 text-sm">{t.neStopped}</p>
       </div>
     );
   }
